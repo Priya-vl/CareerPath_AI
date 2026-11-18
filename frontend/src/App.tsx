@@ -60,5 +60,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Box>
-       </>);
+      <Box component="footer" sx={{ textAlign: "center", color: "text.secondary", fontSize: 12, p: 3 }}>
+        CareerPath AI offers guidance, not guaranteed career outcomes. Please consult teachers, counsellors and official education sources before major decisions.</Box>
+    </>);
 }
