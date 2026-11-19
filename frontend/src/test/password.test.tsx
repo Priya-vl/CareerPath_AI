@@ -24,4 +24,19 @@ describe("password reset screens", () => {
     mockApi({}); renderAt("/login"); expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute("href", "/forgot-password");
     expect(screen.getByLabelText(/username or email/i)).toBeInTheDocument();
   });
+  it("login password can be shown and hidden with the eye button", async () => {
+    mockApi({}); renderAt("/login");
+    const field = screen.getByLabelText(/^password/i); await userEvent.type(field, "secret-pass-1");
+    expect(field).toHaveAttribute("type", "password");
+    await userEvent.click(screen.getByRole("button", { name: /show password/i }));
+    expect(field).toHaveAttribute("type", "text"); expect(field).toHaveValue("secret-pass-1");
+    await userEvent.click(screen.getByRole("button", { name: /hide password/i }));
+    expect(field).toHaveAttribute("type", "password");
+  });
+  it("register and reset pages have the eye button too", async () => {
+    mockApi({}); const { unmount } = renderAt("/register");
+    expect(screen.getByRole("button", { name: /show password/i })).toBeInTheDocument(); unmount();
+    renderAt("/reset-password?uid=a&token=b");
+    expect(screen.getAllByRole("button", { name: /show password/i })).toHaveLength(2);
+  });
 });

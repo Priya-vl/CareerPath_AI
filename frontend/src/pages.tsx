@@ -12,7 +12,7 @@ import ReactFlow, { Background, Controls, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { api, auth, home } from "./api";
 import { gradBtn } from "./theme";
-import { Icon, Reveal, Spinner, Tilt } from "./ui";
+import { Icon, PasswordField, Reveal, Spinner, Tilt } from "./ui";
 
 const Wrap = ({ children, w = "lg" }: any) => <Container maxWidth={w} sx={{ py: 4 }}>{children}</Container>;
 const Err = ({ e }: any) => (e ? <Alert severity="error" sx={{ my: 1 }}>{e.message}</Alert> : null);
@@ -50,7 +50,7 @@ export function Login({ register = false }: { register?: boolean }) {
         {register && <TextField label="Name" value={f.first_name} onChange={set("first_name")} />}
         {register && <TextField label="Email" type="email" value={f.email} onChange={set("email")} autoComplete="email" required helperText="Used to reset your password" />}
         <TextField label={register ? "Username" : "Username or email"} value={f.username} onChange={set("username")} autoComplete="username" required />
-        <TextField label="Password (8+ characters)" type="password" value={f.password} onChange={set("password")} autoComplete={register ? "new-password" : "current-password"} required />
+        <PasswordField label="Password (8+ characters)" value={f.password} onChange={set("password")} autoComplete={register ? "new-password" : "current-password"} required />
         {register && <TextField select label="I am a" value={f.role} onChange={set("role")}><MenuItem value="student">Student</MenuItem><MenuItem value="parent">Parent</MenuItem></TextField>}
         <Err e={m.error} />
         <Button type="submit" size="large" sx={gradBtn} disabled={m.isPending}>{m.isPending ? "Please wait…" : register ? "Create account" : "Sign in"}</Button>
@@ -76,8 +76,8 @@ export function ResetPassword() {
   const mismatch = pw2 !== "" && pw !== pw2;
   return (<Container maxWidth="xs" sx={{ py: { xs: 4, md: 8 } }}><Box className="glass" sx={{ p: 4 }}><Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); if (!mismatch) m.mutate(); }}>
     <Typography variant="h4">Choose a new <span className="gtext">password</span></Typography>
-    <TextField label="New password (8+ characters)" type="password" value={pw} onChange={(e) => setPw(e.target.value)} required autoComplete="new-password" />
-    <TextField label="Repeat new password" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required autoComplete="new-password" error={mismatch} helperText={mismatch ? "Passwords don't match" : ""} />
+    <PasswordField label="New password (8+ characters)" value={pw} onChange={(e) => setPw(e.target.value)} required autoComplete="new-password" />
+    <PasswordField label="Repeat new password" value={pw2} onChange={(e) => setPw2(e.target.value)} required autoComplete="new-password" error={mismatch} helperText={mismatch ? "Passwords don't match" : ""} />
     <Err e={m.error} />{m.isSuccess && <Alert severity="success">{m.data.detail}</Alert>}
     {m.isSuccess ? <Button component={RLink} to="/login" sx={gradBtn}>Go to sign in</Button> : <Button type="submit" size="large" sx={gradBtn} disabled={m.isPending || pw.length < 8 || mismatch}>{m.isPending ? "Saving…" : "Save new password"}</Button>}</Stack></Box></Container>);
 }

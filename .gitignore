@@ -1,4 +1,11 @@
 db.sqlite3
 __pycache__/
+*.pyc
 node_modules/
+.venv/
+venv/
 .env
+frontend/dist/
+backend/staticfiles/
+.vercel/
+.DS_Store

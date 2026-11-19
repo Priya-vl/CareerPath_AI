@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, IconButton, InputAdornment, TextField, TextFieldProps } from "@mui/material";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -83,7 +83,26 @@ const P: Record<string, ReactNode> = {
   moon: <><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></>,
   lock: <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
   send: <><path d="m22 2-7 20-4-9-9-4zM22 2 11 13" /></>,
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  eyeoff: <><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2" /><path d="M10.7 5.1A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.7 2.7" /><path d="M6.6 6.6A13.5 13.5 0 0 0 2 12s3 7 10 7a9.7 9.7 0 0 0 5.4-1.6" /><path d="M2 2l20 20" /></>,
 };
 export function Icon({ name, size = 28 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{P[name]}</svg>;
+}
+
+/** A password input with a show/hide (eye) button. Use it anywhere a plain type="password" TextField was used. */
+export function PasswordField(props: TextFieldProps) {
+  const [show, setShow] = useState(false);
+  return (
+    <TextField {...props} type={show ? "text" : "password"}
+      InputProps={{
+        ...props.InputProps,
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton edge="end" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show}
+              onClick={() => setShow((v) => !v)} onMouseDown={(e) => e.preventDefault()} sx={{ color: "text.secondary" }}>
+              <Icon name={show ? "eyeoff" : "eye"} size={20} />
+            </IconButton>
+          </InputAdornment>),
+      }} />);
 }
