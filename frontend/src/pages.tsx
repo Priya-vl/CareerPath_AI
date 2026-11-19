@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Checkbox, Chip, Container, FormControlLabel, Grid, LinearProgress, MenuItem,
-         Stack, TextField, ToggleButton, ToggleButtonGroup, Typography, useTheme } from "@mui/material";
+         Stack, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography, useTheme } from "@mui/material";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import ReactFlow, { Background, Controls, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
@@ -32,7 +32,7 @@ function Chart({ title, obj }: { title: string; obj?: Record<string, number> }) 
 
 /* ---------- Login / Register ---------- */
 export function Login({ register = false }: { register?: boolean }) {
-  const nav = useNavigate(); const loc: any = useLocation(); const [f, setF] = useState({ username: "", password: "", first_name: "", role: "student" });
+  const nav = useNavigate(); const loc: any = useLocation(); const [f, setF] = useState({ username: "", email: "", password: "", first_name: "", role: "student" });
   const m = useMutation({
     mutationFn: async () => {
       if (register) await api("/auth/register", "POST", f);
@@ -48,13 +48,38 @@ export function Login({ register = false }: { register?: boolean }) {
         <Typography variant="h4">{register ? <>Create your <span className="gtext">account</span></> : <>Welcome <span className="gtext">back</span></>}</Typography>
         {loc.state?.next && <Alert severity="info">Please sign in to use this part of the app.</Alert>}
         {register && <TextField label="Name" value={f.first_name} onChange={set("first_name")} />}
-        <TextField label="Username" value={f.username} onChange={set("username")} autoComplete="username" required />
+        {register && <TextField label="Email" type="email" value={f.email} onChange={set("email")} autoComplete="email" required helperText="Used to reset your password" />}
+        <TextField label={register ? "Username" : "Username or email"} value={f.username} onChange={set("username")} autoComplete="username" required />
         <TextField label="Password (8+ characters)" type="password" value={f.password} onChange={set("password")} autoComplete={register ? "new-password" : "current-password"} required />
         {register && <TextField select label="I am a" value={f.role} onChange={set("role")}><MenuItem value="student">Student</MenuItem><MenuItem value="parent">Parent</MenuItem></TextField>}
         <Err e={m.error} />
         <Button type="submit" size="large" sx={gradBtn} disabled={m.isPending}>{m.isPending ? "Please wait…" : register ? "Create account" : "Sign in"}</Button>
+        {!register && <Button component={RLink} to="/forgot-password" color="inherit" size="small">Forgot password?</Button>}
         <Button component={RLink} to={register ? "/login" : "/register"} color="secondary">{register ? "I already have an account" : "Create an account"}</Button>
       </Stack></Box></Reveal></Container>);
+}
+
+export function ForgotPassword() {
+  const [email, setEmail] = useState(""); const m = useMutation({ mutationFn: () => api("/auth/password-reset", "POST", { email }) });
+  return (<Container maxWidth="xs" sx={{ py: { xs: 4, md: 8 } }}><Box className="glass" sx={{ p: 4 }}><Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
+    <Typography variant="h4">Forgot <span className="gtext">password</span></Typography>
+    <Typography color="text.secondary" variant="body2">Enter your account email and we'll send a link to choose a new password.</Typography>
+    <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+    <Err e={m.error} />{m.isSuccess && <Alert severity="success">{m.data.detail}</Alert>}
+    <Button type="submit" size="large" sx={gradBtn} disabled={m.isPending || !email}>{m.isPending ? "Sending…" : "Send reset link"}</Button>
+    <Button component={RLink} to="/login" color="secondary">Back to sign in</Button></Stack></Box></Container>);
+}
+
+export function ResetPassword() {
+  const [sp] = useSearchParams(); const [pw, setPw] = useState(""); const [pw2, setPw2] = useState("");
+  const m = useMutation({ mutationFn: () => api("/auth/password-reset/confirm", "POST", { uid: sp.get("uid"), token: sp.get("token"), password: pw }) });
+  const mismatch = pw2 !== "" && pw !== pw2;
+  return (<Container maxWidth="xs" sx={{ py: { xs: 4, md: 8 } }}><Box className="glass" sx={{ p: 4 }}><Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); if (!mismatch) m.mutate(); }}>
+    <Typography variant="h4">Choose a new <span className="gtext">password</span></Typography>
+    <TextField label="New password (8+ characters)" type="password" value={pw} onChange={(e) => setPw(e.target.value)} required autoComplete="new-password" />
+    <TextField label="Repeat new password" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required autoComplete="new-password" error={mismatch} helperText={mismatch ? "Passwords don't match" : ""} />
+    <Err e={m.error} />{m.isSuccess && <Alert severity="success">{m.data.detail}</Alert>}
+    {m.isSuccess ? <Button component={RLink} to="/login" sx={gradBtn}>Go to sign in</Button> : <Button type="submit" size="large" sx={gradBtn} disabled={m.isPending || pw.length < 8 || mismatch}>{m.isPending ? "Saving…" : "Save new password"}</Button>}</Stack></Box></Container>);
 }
 
 /* ---------- Home (overview + dashboard in one page) ---------- */
@@ -141,6 +166,8 @@ export function Assessment() {
 export function AssessmentResults() {
   const res = useQuery({ queryKey: ["aresults"], queryFn: () => api("/assessment/results"), retry: false });
   const recs = useQuery({ queryKey: ["recs"], queryFn: () => api("/recommendations") });
+  const [rated, setRated] = useState<Record<number, boolean>>({});
+  const fb = useMutation({ mutationFn: (v: any) => api("/recommendations/feedback", "POST", { career_id: v.id, liked: v.liked }), onSuccess: (_d, v: any) => setRated((r) => ({ ...r, [v.id]: v.liked })) });
   if (res.isLoading) return <Spinner label="Loading results…" />;
   if (res.error) return <Wrap w="sm"><Box className="glass" sx={{ p: 4, textAlign: "center" }}><Typography variant="h5">No assessment yet</Typography>
     <Button component={RLink} to="/assessment" sx={{ ...gradBtn, mt: 2 }}>Take the assessment</Button></Box></Wrap>;
@@ -158,6 +185,9 @@ export function AssessmentResults() {
         <Stack direction="row" gap={.8} flexWrap="wrap" sx={{ mt: .5 }}>{r.skill_gaps.map((s: string) => <Chip key={s} size="small" label={s} variant="outlined" />)}</Stack>
         <Stack direction="row" gap={1} sx={{ mt: 2 }}><Button size="small" component={RLink} to={`/careers/${r.career_id}`} color="inherit">Details</Button>
           <Button size="small" component={RLink} to={`/roadmap?career=${r.career_id}`} sx={gradBtn}>Create roadmap</Button></Stack>
+        <Stack direction="row" gap={1} alignItems="center" sx={{ mt: 1.5 }}><Typography variant="caption" color="text.secondary">Was this useful?</Typography>
+          <Button size="small" variant={rated[r.career_id] === true ? "contained" : "outlined"} aria-pressed={rated[r.career_id] === true} onClick={() => fb.mutate({ id: r.career_id, liked: true })}>Useful</Button>
+          <Button size="small" variant={rated[r.career_id] === false ? "contained" : "outlined"} color="inherit" aria-pressed={rated[r.career_id] === false} onClick={() => fb.mutate({ id: r.career_id, liked: false })}>Not for me</Button></Stack>
       </Box></Tilt></Reveal></Grid>))}</Grid>
     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 3 }}>Match scores are heuristic guidance based on your inputs, not a scientific prediction.</Typography>
     <Button component={RLink} to="/assessment" color="secondary" sx={{ mt: 1 }}>Retake assessment</Button>
@@ -287,7 +317,7 @@ export function Roadmap() {
 const SUGGEST = ["What careers can I pursue with PCM?", "What should I study to become a data scientist?", "What is the difference between AI engineering and data science?",
   "Which skills should I learn?", "What degree options are available for a doctor?", "What should I do after class 10?"];
 const MODE: Record<string, string> = { tools: "Answered from the career database", llm: "AI-written from these sources (check important details)", extractive: "Passages from my documents", no_sources: "" };
-export function Assistant() {
+function AssistantChat() {
   const [msgs, setMsgs] = useState<any[]>([]); const [text, setText] = useState(""); const [sid, setSid] = useState<number>(); const end = useRef<HTMLDivElement>(null);
   const send = useMutation({ mutationFn: (m: string) => api("/assistant/chat", "POST", { message: m, session_id: sid }),
     onMutate: (m: string) => { setMsgs((x) => [...x, { r: "me", t: m }]); setText(""); },
@@ -295,8 +325,8 @@ export function Assistant() {
     onError: (e: any) => setMsgs((x) => [...x, { r: "ai", t: `Sorry, something went wrong: ${e.message}`, s: [] }]) });
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, send.isPending]);
   const ask = (m: string) => { if (m.trim() && !send.isPending) send.mutate(m.trim()); };
-  return (<Wrap w="md">
-    <Title a="Career" b="assistant" sub="Ask about streams, degrees, exams and skills. Answers come from the career database and documents, with sources. If it doesn't know, it says so." />
+  return (<>
+    <Typography color="text.secondary" sx={{ mb: 2 }}>Ask about streams, degrees, exams and skills. Answers come from the career database and documents, with sources. If it doesn't know, it says so.</Typography>
     <Box className="glass" sx={{ p: { xs: 2, md: 3 }, minHeight: 360 }}>
       {!msgs.length && <><Typography color="text.secondary" sx={{ mb: 2 }}>Try one of these:</Typography>
         <Stack direction="row" gap={1} flexWrap="wrap">{SUGGEST.map((s) => <Chip key={s} label={s} clickable onClick={() => ask(s)} variant="outlined" sx={{ height: "auto", py: .8, "& .MuiChip-label": { whiteSpace: "normal" } }} />)}</Stack></>}
@@ -309,7 +339,37 @@ export function Assistant() {
     <Stack direction="row" spacing={1} sx={{ mt: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); ask(text); }}>
       <TextField fullWidth value={text} onChange={(e) => setText(e.target.value)} label="Ask about careers, degrees, exams…" />
       <Button type="submit" sx={{ ...gradBtn, minWidth: 56 }} disabled={!text.trim() || send.isPending} aria-label="Send"><Icon name="send" size={20} /></Button></Stack>
-  </Wrap>);
+  </>);
+}
+
+
+function PlanTab() {
+  const nav = useNavigate(); const [goal, setGoal] = useState("I want to become an AI engineer");
+  const plan = useMutation({ mutationFn: () => api("/agent/plan", "POST", { goal }) });
+  const save = useMutation({ mutationFn: (r: any) => api("/roadmaps/generate", "POST", { career_id: r.career_id, weeks: r.weeks }), onSuccess: () => nav("/roadmap") });
+  const d = plan.data;
+  return (<>
+    <Typography color="text.secondary" sx={{ mb: 2 }}>Tell me a career goal. The planner reads your profile and assessment, looks up the career and courses, checks your skill gaps and drafts a roadmap. Nothing is saved until you choose.</Typography>
+    <Stack direction="row" spacing={1} component="form" onSubmit={(e) => { e.preventDefault(); if (goal.trim()) plan.mutate(); }}>
+      <TextField fullWidth value={goal} onChange={(e) => setGoal(e.target.value)} label="Your goal" />
+      <Button type="submit" sx={{ ...gradBtn, minWidth: 150 }} disabled={!goal.trim() || plan.isPending}>Make my plan</Button></Stack>
+    {plan.isPending && <Spinner label="Planning…" />}<Err e={plan.error} />
+    {d && <Box className="page" sx={{ mt: 3 }}>
+      <Typography variant="overline" color="secondary">{d.mode === "llm" ? "Planned by an AI model using these tools" : "Planned by rules using these tools"}</Typography>
+      <Stack spacing={.5} sx={{ mb: 2 }}>{d.steps.map((s: any, i: number) => <Typography key={i} variant="body2" color="text.secondary">✓ <b>{s.tool}</b>: {s.summary}</Typography>)}</Stack>
+      <Box className="glass bubble" sx={{ p: 3, mb: 2 }}>{d.answer}</Box>
+      {d.roadmap_preview && <Box className="glass" sx={{ p: 3 }}><Typography variant="h6">{d.roadmap_preview.weeks}-week roadmap preview: {d.roadmap_preview.career}</Typography>
+        {d.roadmap_preview.items.map((i: any) => <Typography key={i.week} variant="body2" color="text.secondary">Week {i.week}: {i.topic}</Typography>)}
+        <Button sx={{ ...gradBtn, mt: 2 }} disabled={save.isPending} onClick={() => save.mutate(d.roadmap_preview)}>Save this roadmap</Button><Err e={save.error} /></Box>}
+    </Box>}
+  </>);
+}
+
+export function Assistant() {
+  const [tab, setTab] = useState(0);
+  return (<Wrap w="md"><Title a="Career" b="assistant" />
+    <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }} aria-label="Assistant mode"><Tab label="Ask a question" /><Tab label="Plan my path" /></Tabs>
+    {tab === 0 ? <AssistantChat /> : <PlanTab />}</Wrap>);
 }
 
 /* ---------- Profile ---------- */

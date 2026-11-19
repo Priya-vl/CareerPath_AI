@@ -7,7 +7,7 @@ import { useMode } from "./mode";
 import { Icon } from "./ui";
 import Landing from "./Landing";
 import { AssessmentPreview, AssistantPreview, CareersPreview, RoadmapPreview } from "./Preview";
-import { Login, Dashboard, Assessment, AssessmentResults, Careers, Roadmap, Assistant, Profile, MindMap, Staff } from "./pages";
+import { ForgotPassword, ResetPassword, Login, Dashboard, Assessment, AssessmentResults, Careers, Roadmap, Assistant, Profile, MindMap, Staff } from "./pages";
 
 const STUDENT: [string, string][] = [["/", "Home"], ["/assessment", "Assessment"], ["/careers", "Careers & Pathways"], ["/roadmap", "Roadmap"], ["/assistant", "Assistant"], ["/mindmap", "Mind map"], ["/profile", "Profile"]];
 const GUEST: [string, string][] = [["/", "Home"], ["/assessment", "Assessment"], ["/careers", "Careers & Pathways"], ["/roadmap", "Roadmap"], ["/assistant", "Assistant"]];
@@ -49,6 +49,7 @@ export default function App() {
           <Route path="/" element={homeEl} />
           <Route path="/login" element={loggedIn ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/register" element={loggedIn ? <Navigate to="/" replace /> : <Login register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/profile" element={guard(<Profile />)} /><Route path="/onboarding" element={guard(<Profile />)} />
           <Route path="/assessment" element={loggedIn ? <Assessment /> : <AssessmentPreview />} /><Route path="/assessment/results" element={guard(<AssessmentResults />)} />
           <Route path="/careers" element={loggedIn ? <Careers /> : <CareersPreview />} /><Route path="/careers/:id" element={guard(<Careers />)} />

@@ -13,7 +13,10 @@ export async function api(path: string, method = "GET", body?: unknown) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && auth.get()) { auth.clear(); location.href = "/login"; }
-  if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+  if (!res.ok) {
+    const flat = Object.entries(data).map(([k, v]) => `${k}: ${([] as any[]).concat(v as any).join(" ")}`).join(" · ");
+    throw new Error((data as any).detail || flat || "Request failed");
+  }
   return data;
 }
 export const home = (_r: string) => "/";

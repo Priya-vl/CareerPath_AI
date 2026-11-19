@@ -6,6 +6,8 @@ from careers.seed_extra import EXTRA
 from assessments.models import Question
 from assessments.seed import build_questions
 from rag.ingest import ingest_careers, ingest_pathways
+from rag.tasks import embed_chunks_task
+from config.celery import run
 
 class Command(BaseCommand):
     help = "Load starter careers, assessment questions and RAG documents (idempotent)."
@@ -18,4 +20,5 @@ class Command(BaseCommand):
         Question.objects.exclude(text__in=[q["text"] for q in bank]).delete()
         ingest_careers()
         ingest_pathways()
+        run(embed_chunks_task)   # no-op unless EMBED_API_KEY is set
         self.stdout.write(self.style.SUCCESS("Seeded."))

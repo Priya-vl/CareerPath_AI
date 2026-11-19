@@ -18,7 +18,7 @@ class Base(APITestCase):
         self.assertEqual(r.status_code, 200)
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + r.data["access"])
     def student(self, name="stu"):
-        r = self.client.post("/api/auth/register", {"username": name, "password": "pass12345!", "role": "student"})
+        r = self.client.post("/api/auth/register", {"username": name, "email": f"{name}@example.com", "password": "pass12345!", "role": "student"})
         self.assertEqual(r.status_code, 201); self.login(name); return User.objects.get(username=name)
 
 class AuthProfile(Base):

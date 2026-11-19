@@ -16,17 +16,23 @@ def config():
     key = os.environ.get("LLM_API_KEY", "")
     return {"base": base.rstrip("/"), "key": key, "model": model} if (base and key and model) else None
 
-def chat_completion(messages, max_tokens=600):
+def chat_raw(messages, tools=None, max_tokens=700):
+    """Returns the assistant message dict (may contain tool_calls) or None on any failure."""
     cfg = config()
     if not cfg:
         return None
-    req = urllib.request.Request(
-        cfg["base"] + "/chat/completions",
-        data=json.dumps({"model": cfg["model"], "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}).encode(),
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + cfg["key"], "User-Agent": "careerpath-ai/0.1"})
+    body = {"model": cfg["model"], "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
+    if tools:
+        body["tools"] = tools; body["tool_choice"] = "auto"
+    req = urllib.request.Request(cfg["base"] + "/chat/completions", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + cfg["key"], "User-Agent": "careerpath-ai/0.1"})
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.load(r)["choices"][0]["message"]["content"].strip() or None
+        with urllib.request.urlopen(req, timeout=40) as r:
+            return json.load(r)["choices"][0]["message"]
     except Exception as e:   # network error, 429 quota, bad model id, malformed JSON...
         log.warning("LLM call failed: %s", type(e).__name__)
         return None
+
+def chat_completion(messages, max_tokens=600):
+    m = chat_raw(messages, None, max_tokens)
+    return ((m.get("content") or "").strip() or None) if m else None

@@ -1,22 +1,37 @@
+x-backend-env: &backend-env
+  POSTGRES_HOST: db
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-careerpath-dev}"
+  DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:-change-me}"
+  DJANGO_DEBUG: "${DJANGO_DEBUG:-0}"
+  CORS_ORIGINS: http://localhost:5173
+  FRONTEND_URL: http://localhost:5173
+  CELERY_BROKER_URL: redis://redis:6379/0
+  LLM_PROVIDER: "${LLM_PROVIDER:-groq}"
+  LLM_API_KEY: "${LLM_API_KEY:-}"
+  LLM_MODEL: "${LLM_MODEL:-}"
+  EMBED_API_KEY: "${EMBED_API_KEY:-}"
+  EMAIL_HOST: "${EMAIL_HOST:-}"
+  EMAIL_HOST_USER: "${EMAIL_HOST_USER:-}"
+  EMAIL_HOST_PASSWORD: "${EMAIL_HOST_PASSWORD:-}"
+
 services:
   db:
     image: postgres:16
     environment: {POSTGRES_DB: careerpath, POSTGRES_USER: careerpath, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-careerpath-dev}"}
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck: {test: ["CMD-SHELL", "pg_isready -U careerpath"], interval: 3s, retries: 20}
+  redis:
+    image: redis:7-alpine
   backend:
     build: ./backend
-    environment:
-      POSTGRES_HOST: db
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-careerpath-dev}"
-      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:-change-me}"
-      DJANGO_DEBUG: "${DJANGO_DEBUG:-0}"
-      CORS_ORIGINS: http://localhost:5173
-      LLM_PROVIDER: "${LLM_PROVIDER:-groq}"
-      LLM_API_KEY: "${LLM_API_KEY:-}"
-      LLM_MODEL: "${LLM_MODEL:-}"
-    depends_on: {db: {condition: service_healthy}}
+    environment: *backend-env
+    depends_on: {db: {condition: service_healthy}, redis: {condition: service_started}}
     ports: ["8000:8000"]
+  worker:
+    build: ./backend
+    command: celery -A config worker -l info
+    environment: *backend-env
+    depends_on: {db: {condition: service_healthy}, redis: {condition: service_started}}
   frontend:
     build: ./frontend
     environment: {VITE_API_URL: "http://localhost:8000/api"}

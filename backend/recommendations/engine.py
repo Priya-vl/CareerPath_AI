@@ -34,4 +34,15 @@ def generate(user, profile, top_n=5):
     from careers.models import Career
     feats = build_features(profile, user.assessments.order_by("-created_at").first())
     res = [r for r in (score_career(c, feats, profile) for c in Career.objects.all()) if r]
-    return sorted(res, key=lambda r: -r["match_score"])[:top_n]
+    res = sorted(res, key=lambda r: -r["match_score"])
+    from . import ml
+    model = ml.load()
+    if model and res:   # optional re-ranking from a model trained on real student feedback
+        probs = ml.predict(model, feats); pmax = max(probs.values()) or 1.0
+        for r in res:
+            r["baseline_score"] = r["match_score"]; p = probs.get(r["career_id"])
+            if p is not None:
+                r["ml_probability"] = round(p, 3); r["match_score"] = round(0.8 * r["baseline_score"] + 0.2 * 100 * p / pmax, 1)
+                r["reasons"] = r["reasons"] + ["Adjusted using a model trained on past student feedback"]
+        res = sorted(res, key=lambda r: -r["match_score"])
+    return res[:top_n]

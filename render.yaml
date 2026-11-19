@@ -1,4 +1,4 @@
-# Render Blueprint: Postgres + Django API + static React site. See DEPLOY.md.
+# Render Blueprint: Postgres + Django API. The React site goes on Vercel (see DEPLOY.md).
 databases:
   - name: careerpath-db
     plan: free
@@ -29,31 +29,15 @@ services:
         value: "1"
       - key: ALLOWED_HOSTS
         value: .onrender.com,localhost
-      - key: CORS_ORIGINS            # your frontend URL, e.g. https://careerpath-web.onrender.com (no trailing slash)
-        sync: false
-      - key: CSRF_TRUSTED_ORIGINS    # your API URL, e.g. https://careerpath-api.onrender.com
-        sync: false
+      - key: FRONTEND_URL          # temporary value; replace with your Vercel URL after step 3 of DEPLOY.md
+        value: https://placeholder.example.com
+      - key: LLM_PROVIDER
+        value: groq
       - key: DJANGO_SUPERUSER_USERNAME
         sync: false
       - key: DJANGO_SUPERUSER_EMAIL
         sync: false
       - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
-      - key: LLM_PROVIDER
-        value: groq
-      - key: LLM_API_KEY             # optional; leave empty to use retrieval-only answers
+      - key: LLM_API_KEY           # optional free Groq key; leave empty to skip
         sync: false
-
-  - type: web
-    name: careerpath-web
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL            # your API URL + /api, e.g. https://careerpath-api.onrender.com/api
-        sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html

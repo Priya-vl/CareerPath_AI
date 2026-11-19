@@ -3,6 +3,8 @@ from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 from rag.retrieval import retrieve
 from . import llm, tools
+from .agent import plan
+from accounts.permissions import IsStudent
 from .grounding import REFUSAL, build_messages, check_citations, student_context
 from .llm import chat_completion
 from .models import ChatSession, ChatMessage
@@ -52,3 +54,13 @@ class ChatView(APIView):
         cfg = llm.config()
         return Response({"session_id": session.id, "answer": answer, "sources": sources, "mode": mode,
                          "model": cfg["model"] if mode == "llm" else None})
+
+class AgentPlanView(APIView):
+    """POST {goal}: runs the planning agent and returns its steps, a written plan and a roadmap preview (nothing is saved)."""
+    permission_classes = [IsStudent]
+    throttle_classes = [UserRateThrottle, ScopedRateThrottle]; throttle_scope = "llm"
+    def post(self, request):
+        goal = str(request.data.get("goal", "")).strip()[:300]
+        if not goal:
+            return Response({"detail": "goal is required."}, status=400)
+        return Response(plan(request.user, goal))

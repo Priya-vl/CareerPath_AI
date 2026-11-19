@@ -51,7 +51,8 @@ export function useParallax(factor: number) {
 export function CountUp({ to }: { to: number }) {
   const ref = useRef<HTMLSpanElement>(null); const [v, setV] = useState(reduced() ? to : 0);
   useEffect(() => {
-    const el = ref.current; if (!el || reduced()) return;
+    const el = ref.current; if (!el) return;
+    if (reduced() || !("IntersectionObserver" in window)) { setV(to); return; }
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return; io.disconnect(); const t0 = performance.now();
       const tick = (t: number) => { const k = Math.min(1, (t - t0) / 1200); setV(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(tick); };

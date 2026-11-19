@@ -9,3 +9,6 @@ class DocumentChunk(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
     position = models.PositiveIntegerField()
     text = models.TextField()
+    embedding = models.JSONField(null=True, blank=True)       # L2-normalised vector
+    embedding_model = models.CharField(max_length=120, blank=True, default="")
+

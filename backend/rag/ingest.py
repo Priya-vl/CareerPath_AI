@@ -12,9 +12,11 @@ def chunk_text(text, size=300):
 
 def add_document(title, source, text):
     doc, _ = Document.objects.get_or_create(title=title, defaults={"source": source})
+    chunks = chunk_text(text)
+    if list(doc.chunks.order_by("position").values_list("text", flat=True)) == chunks:
+        return doc   # unchanged: keep existing chunks and their embeddings
     doc.chunks.all().delete()
-    DocumentChunk.objects.bulk_create([DocumentChunk(document=doc, position=i, text=t)
-                                       for i, t in enumerate(chunk_text(text))])
+    DocumentChunk.objects.bulk_create([DocumentChunk(document=doc, position=i, text=t) for i, t in enumerate(chunks)])
     return doc
 
 def ingest_careers():

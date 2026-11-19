@@ -14,6 +14,8 @@ HTTPS = os.environ.get("DJANGO_HTTPS", "0") == "1"   # set to 1 behind an HTTPS 
 if HTTPS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https"); SESSION_COOKIE_SECURE = True; CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+if os.environ.get("RENDER_EXTERNAL_URL"):   # set automatically by Render; lets /admin log in over https
+    CSRF_TRUSTED_ORIGINS.append(os.environ["RENDER_EXTERNAL_URL"])
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
@@ -56,9 +58,27 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"anon": "60/min", "user": "300/min", "auth": "10/min", "llm": "20/min"},
 }
 SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(minutes=30), "REFRESH_TOKEN_LIFETIME": timedelta(days=7)}
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",")
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys([o.strip().rstrip("/") for o in os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
+                                           + [os.environ.get("FRONTEND_URL", "").rstrip("/")] * bool(os.environ.get("FRONTEND_URL"))))
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
             "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"}}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---- Email / password reset ----
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+PASSWORD_RESET_TIMEOUT = 3600   # reset links last 1 hour
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "CareerPath AI <no-reply@careerpath.local>")
+if os.environ.get("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ["EMAIL_HOST"]; EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", ""); EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"   # emails are printed to the server log
+
+# ---- Celery: real queue when CELERY_BROKER_URL (e.g. Redis) is set, otherwise tasks run inline ----
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "")
+if not CELERY_BROKER_URL:
+    CELERY_BROKER_URL = "memory://"; CELERY_TASK_ALWAYS_EAGER = True; CELERY_TASK_EAGER_PROPAGATES = True
